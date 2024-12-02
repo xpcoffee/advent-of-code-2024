@@ -1,8 +1,13 @@
 import { createReadStream } from "fs";
 import { createInterface } from "readline";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // read input
-const rs = createReadStream("input.txt");
+const rs = createReadStream(path.join(__dirname, "input.txt"));
 const rl = createInterface(rs);
 
 function reportIsSafe(values: number[]): boolean {
