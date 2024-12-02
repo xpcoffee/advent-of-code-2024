@@ -1,12 +1,22 @@
 import { createReadStream } from "fs";
 import { createInterface } from "readline";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// read input
-const rs = createReadStream("input.txt");
-const rl = createInterface(rs);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-function isDeltaSafe(values: number[], refSlope: number, i: number, j: number) {
-  const delta = values[j] - values[i];
+const SAMPLING_RATIO = 0;
+const MAX_DAMPING = 1;
+
+// a single delta between two values
+function isDeltaSafe(
+  values: number[],
+  refSlope: number,
+  idxA: number,
+  idxB: number,
+) {
+  const delta = values[idxB] - values[idxA];
   if (delta === 0) {
     return false;
   }
@@ -25,42 +35,59 @@ function isDeltaSafe(values: number[], refSlope: number, i: number, j: number) {
   return true;
 }
 
+// a full report
 function reportIsSafe(values: number[]): boolean {
+  // get a reference slope to see if slope changes
   const refDelta = values[1] - values[0];
   const refSlope = refDelta > 0 ? 1 : -1;
-  let dampenerUsed = false;
 
-  for (let i = 0; i < values.length - 1; i++) {
-    const deltaSafe = isDeltaSafe(values, refSlope, i, i + 1);
-    if (!deltaSafe) {
-      if (!dampenerUsed) {
-        dampenerUsed = true;
-        i++;
-      } else {
-        return false;
-      }
+  let dampings = 0;
+
+  for (let curIdx = 0; curIdx < values.length - 1; curIdx++) {
+    let lookAheadIdx = curIdx + 1;
+    let deltaSafe = isDeltaSafe(values, refSlope, curIdx, lookAheadIdx);
+
+    while (!deltaSafe && dampings < MAX_DAMPING) {
+      lookAheadIdx++;
+      dampings++;
+      deltaSafe = isDeltaSafe(values, refSlope, curIdx, lookAheadIdx);
     }
+
+    if (deltaSafe) {
+      curIdx = lookAheadIdx - 1;
+      continue;
+    }
+    return false;
   }
 
   return true;
 }
 
-let safeReports = 0;
-let totalReports = 0;
-for await (const line of rl) {
-  totalReports++;
-  const report = line.split(" ").map((i) => Number.parseInt(i));
-  if (reportIsSafe(report)) {
-    if (totalReports % 10 == 0) {
-      console.log("safe " + JSON.stringify(report));
-    }
-    safeReports++;
-  } else {
-    if (totalReports % 10 == 0) {
-      console.log("unsafe " + JSON.stringify(report));
+async function main() {
+  let safeReports = 0;
+  let totalReports = 0;
+
+  // read input
+  const rs = createReadStream(path.join(__dirname, "input.txt"));
+  // const rs = createReadStream(path.join(__dirname, "test-input.txt"));
+  const rl = createInterface(rs);
+
+  for await (const line of rl) {
+    totalReports++;
+    const report = line.split(" ").map((i) => Number.parseInt(i));
+    if (reportIsSafe(report)) {
+      if (totalReports % SAMPLING_RATIO == 0) {
+        console.log("safe " + JSON.stringify(report));
+      }
+      safeReports++;
+    } else {
+      if (totalReports % SAMPLING_RATIO == 0) {
+        console.log("unsafe " + JSON.stringify(report));
+      }
     }
   }
-}
 
-console.log("Total reports = " + totalReports);
-console.log("Safe reports = " + safeReports);
+  console.log("Total reports = " + totalReports);
+  console.log("Safe reports = " + safeReports);
+}
+await main();
