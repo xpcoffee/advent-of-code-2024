@@ -22,6 +22,23 @@ function logv(msg: string) {
   }
 }
 
+// for each
+//  current
+//    determine next
+//      if safe, step to next
+//      if unsafe, pick another next
+//        if unsafe again
+//
+//
+//
+//     -> pick current + 1
+//       -> is safe?
+//         -> no = pick current +2
+//         ->      note error
+//         -> yes = current = next
+//
+//
+
 // a single delta between two values
 function isDeltaSafe(valueA: number, valueB: number, refSlope?: -1 | 1) {
   const delta = valueB - valueA;
@@ -52,76 +69,32 @@ function isDeltaSafe(valueA: number, valueB: number, refSlope?: -1 | 1) {
 
 // a full report
 function reportIsSafe(values: number[]): boolean {
-  let refSlope: -1 | 1 | undefined;
+  let errorBudget = 1;
+  let refSlope: -1 | 1 | undefined = undefined;
 
-  function getSlope(valueA: number, valueB: number) {
-    const delta = valueB - valueA;
-    return delta > 0 ? 1 : -1;
-  }
+  for (let idx = 0; idx < values.length - 2; idx++) {
+    let lookAheadIdx = idx + 1;
+    var lookAheadErrors = 0;
 
-  logv("evaluating " + JSON.stringify(values));
-
-  let dampings = 0;
-
-  for (let curIdx = 0; curIdx < values.length - 1; curIdx++) {
-    let lookAheadIdx = curIdx + 1;
-
-    let valueA = values[curIdx];
-    let valueB = values[lookAheadIdx];
-
-    let deltaSafe = isDeltaSafe(valueA, valueB, refSlope);
-    if (deltaSafe) {
-      refSlope = getSlope(valueA, valueB);
-    }
-
-    while (!deltaSafe && dampings < MAX_DAMPING) {
-      dampings++;
-
-      // reset slope if we find an issue on second value
-      if (curIdx === 1) {
-        refSlope = undefined;
-
-        logv("try ignore initial slope");
-        deltaSafe = isDeltaSafe(valueA, valueB, refSlope);
-      }
-
-      if (!deltaSafe) {
-        logv("try skip next");
-        lookAheadIdx = curIdx + 2;
-        valueA = values[curIdx];
-        valueB = values[lookAheadIdx];
-
-        deltaSafe = isDeltaSafe(valueA, valueB, refSlope);
-      }
-
-      if (!deltaSafe) {
-        if (curIdx == 0) {
-          logv("try skip current - first value edgecase");
-          lookAheadIdx = curIdx + 2;
-          valueA = values[curIdx + 1];
-          valueB = values[lookAheadIdx];
-
-          deltaSafe = isDeltaSafe(valueA, valueB, refSlope);
-        } else {
-          logv("try skip current");
-          lookAheadIdx = curIdx + 1;
-          valueA = values[curIdx - 1];
-          valueB = values[lookAheadIdx];
-
-          deltaSafe = isDeltaSafe(valueA, valueB, refSlope);
-        }
-      }
-
-      if (deltaSafe) {
-        refSlope = getSlope(valueA, valueB);
+    while (
+      errorBudget > 0 &&
+      !isDeltaSafe(values[idx], values[lookAheadIdx], refSlope)
+    ) {
+      if (lookAheadErrors < errorBudget) {
+        lookAheadIdx++;
+        lookAheadErrors++;
+      } else {
+        idx++;
+        errorBudget--;
+        lookAheadErrors = 0;
       }
     }
 
-    if (deltaSafe) {
-      curIdx = lookAheadIdx - 1;
-      continue;
+    errorBudget -= lookAheadErrors;
+
+    if (errorBudget < 0) {
+      return false;
     }
-    return false;
   }
 
   return true;
