@@ -11,6 +11,7 @@ const MAX_DAMPING = 1;
 const INPUT_FILE = "input-mistakes.txt";
 const VERBOSE = true;
 
+// I'm trying to do this without using additional arrays and in a single pass
 // problem - we're only considering two values at a time when doing slope; this requires at least 3
 
 function logv(msg: string) {
