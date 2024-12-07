@@ -1,0 +1,8 @@
+{ type: 'multiply', lhs: 220, rhs: 688 }
+{ type: 'multiply', lhs: 25, rhs: 421 }
+{ type: 'multiply', lhs: 482, rhs: 742 }
+{ type: 'multiply', lhs: 547, rhs: 132 }
+{ type: 'multiply', lhs: 732, rhs: 974 }
+{ type: 'multiply', lhs: 807, rhs: 707 }
+{ type: 'multiply', lhs: 931, rhs: 998 }
+{ type: 'multiply', lhs: 948, rhs: 781 }
